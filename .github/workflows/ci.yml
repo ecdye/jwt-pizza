@@ -7,6 +7,6 @@ on:
 
 jobs:
   test:
-  runs-on: ubuntu-latest
-  steps:
-    - run: echo "Hello GitHub Actions"
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Hello GitHub Actions"
