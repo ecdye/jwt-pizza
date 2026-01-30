@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { HamburgerIcon, CloseIcon } from '../icons';
 import { User } from '../service/pizzaService';
 
@@ -9,6 +9,8 @@ interface Props {
 }
 
 export default function Header(props: Props) {
+  const navigate = useNavigate();
+
   function validateConstraints(constraints: (() => boolean)[]) {
     return constraints.every((c) => c());
   }
@@ -39,13 +41,25 @@ export default function Header(props: Props) {
           <div id="navbar-dark" className="hs-collapse hidden overflow-hidden transition-all duration-300 basis-full grow sm:block">
             <div className="flex flex-col gap-5 mt-5 sm:flex-row sm:items-center sm:justify-end sm:mt-0 sm:ps-5">
               {props.navItems.map((item) => {
-                return (
-                  item.display.includes('nav') &&
-                  (!item.constraints || validateConstraints(item.constraints)) && (
-                    <NavLink key={item.title} className="font-medium text-gray-400  focus:text-orange-600" to={item.to.replace(':subPath?/', '')}>
+                if (!item.display.includes('nav') || (item.constraints && !validateConstraints(item.constraints))) {
+                  return null;
+                }
+                // Render Logout as a button
+                if (item.title === 'Logout') {
+                  return (
+                    <button
+                      key={item.title}
+                      className="font-medium text-gray-400 focus:text-orange-600"
+                      onClick={() => navigate(item.to.replace(':subPath?/', ''))}
+                    >
                       {item.title}
-                    </NavLink>
-                  )
+                    </button>
+                  );
+                }
+                return (
+                  <NavLink key={item.title} className="font-medium text-gray-400  focus:text-orange-600" to={item.to.replace(':subPath?/', '')}>
+                    {item.title}
+                  </NavLink>
                 );
               })}
             </div>

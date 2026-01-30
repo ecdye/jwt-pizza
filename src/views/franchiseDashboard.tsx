@@ -14,12 +14,15 @@ interface Props {
 export default function FranchiseDashboard(props: Props) {
   const navigate = useNavigate();
   const [franchise, setFranchise] = React.useState<Franchise | null>(null);
+  const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     (async () => {
       if (props.user) {
+        setLoading(true);
         const franchises = await pizzaService.getFranchise(props.user);
         if (franchises.length) setFranchise(franchises[0]);
+        setLoading(false);
       }
     })();
   }, [props.user]);
@@ -30,6 +33,10 @@ export default function FranchiseDashboard(props: Props) {
 
   function closeStore(franchise: Franchise, store: Store) {
     navigate('/franchise-dashboard/close-store', { state: { franchise: franchise, store: store } });
+  }
+
+  if (loading) {
+    return <View title="Loading..."><div className="text-neutral-100">Loading franchise data...</div></View>;
   }
 
   if (!franchise) {
