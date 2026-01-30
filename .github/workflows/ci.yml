@@ -7,21 +7,48 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build
+  test:
+    name: Test
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.set_version.outputs.version }}
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - name: Checkout Repo
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22.x'
 
-      - name: set version
+      - name: Install Dependencies
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      - name: Run Tests
+        run: npm run test:coverage
+
+      - name: Update Coverage
+        run: |
+          coverage=$(jq '.total.lines.pct' coverage/coverage-summary.json)
+          color=$(echo "$coverage < 80" | bc | awk '{if ($1) print "red"; else print "green"}')
+          curl -s -X POST "https://pizza-factory.cs329.click/api/badge/${{ secrets.NET_ID }}/jwtpizzacoverage?label=Coverage&value=$coverage%25&color=$color" -H "authorization: bearer ${{ secrets.FACTORY_API_KEY }}"
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test
+    outputs:
+      version: ${{ steps.set_version.outputs.version }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22.x'
+
+      - name: Set Version
         id: set_version
         run: |
           version=$(date +'%Y%m%d.%H%M%S')
@@ -33,8 +60,8 @@ jobs:
           npm ci && npm run build
           cp dist/index.html dist/404.html
 
-      - name: Update pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Update Pages Artifact
+        uses: actions/upload-pages-artifact@v4
         with:
           path: dist/
 
