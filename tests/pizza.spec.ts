@@ -89,7 +89,7 @@ async function basicInit(page: Page) {
   });
 
   // Standard franchises and stores
-  await page.route(/\/api\/franchise(\?.*)?$/, async (route) => {
+  await page.route(/\/api\/franchise(\/\d+)?(\?.*)?$/, async (route) => {
 
     if (route.request().method() == "GET") {
       await route.fulfill({ json: franchises });
@@ -102,6 +102,10 @@ async function basicInit(page: Page) {
       };
       franchises.franchises.push(newFranchise);
       await route.fulfill({ json: {...newFranchise, admins: [{ email: req.admins[0].email, id: validUsers[req.admins[0].email].id, name: validUsers[req.admins[0].email].name }]} });
+    } else if (route.request().method() == "DELETE") {
+      const franchiseId = route.request().url().split('/').pop();
+      franchises.franchises = franchises.franchises.filter(f => f.id.toPrecision() !== franchiseId);
+      await route.fulfill({ json: { message: "franchise deleted" } });
     }
   });
 
@@ -180,4 +184,8 @@ test("login as admin", async ({ page }) => {
   await page.getByRole('textbox', { name: 'franchisee admin email' }).fill('f@jwt.com');
   await page.getByRole('button', { name: 'Create' }).click();
   await expect(page.getByRole('table')).toContainText('Provo');
+
+  await page.locator('tbody:nth-child(5) > .border-neutral-500 > .px-6 > .px-2').click();
+  await page.getByRole('button', { name: 'Close' }).click();
+  await expect(page.getByRole('table')).not.toContainText('Provo');
 });
