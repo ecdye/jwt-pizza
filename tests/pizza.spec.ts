@@ -165,10 +165,12 @@ async function basicInit(page: Page) {
     // /api/franchise - POST create franchise
     if (pathname === "/api/franchise" && method === "POST") {
       const req = route.request().postDataJSON();
+      const adminEmail = req.admins[0].email;
+      const adminUser = validUsers[adminEmail];
       const newFranchise = {
         id: 5,
         name: req.name,
-        admins: [{ email: req.admins[0].email, id: validUsers[req.admins[0].email].id, name: validUsers[req.admins[0].email].name }],
+        admins: [{ email: adminEmail, id: adminUser?.id || "0", name: adminUser?.name || "Unknown" }],
         stores: [],
       };
       franchises.franchises.push(newFranchise);
