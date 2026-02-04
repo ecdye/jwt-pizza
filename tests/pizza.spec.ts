@@ -359,3 +359,11 @@ test("register new user", async ({ page }) => {
   // After register, user should be logged in
   await expect(page.getByRole("link", { name: "TU" })).toBeVisible();
 });
+
+test("docs page", async ({ page }) => {
+  await basicInit(page);
+  await page.goto("/docs/general");
+  await expect(page.getByRole("heading", { name: "JWT Pizza API" })).toBeVisible();
+  await expect(page.getByRole('main')).toContainText('service: http://localhost:3000');
+  await expect(page.getByRole('main')).toContainText('factory: https://pizza-factory.cs329.click');
+});
