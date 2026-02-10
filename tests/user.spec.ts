@@ -5,12 +5,19 @@ import { User, Role } from '../src/service/pizzaService';
 async function basicInit(page: Page) {
     let loggedInUser: User | undefined;
     const validUsers: Record<string, User> = {
-        'd@jwt.com': {
-            id: '3',
-            name: 'Kai Chen',
-            email: 'd@jwt.com',
-            password: 'a',
-            roles: [{ role: Role.Diner }],
+        'a@jwt.com': {
+            id: '1',
+            name: '常用名字',
+            email: 'a@jwt.com',
+            password: 'admin',
+            roles: [{ role: Role.Admin }],
+        },
+        'f@jwt.com': {
+            id: '2',
+            name: 'Franchise Admin',
+            email: 'f@jwt.com',
+            password: 'franchise',
+            roles: [{ role: Role.Franchisee }],
         },
     };
 
@@ -29,8 +36,14 @@ async function basicInit(page: Page) {
             const req = route.request().postDataJSON();
             if (req.name) {
                 // This is a register request (has name field)
+                // Generate a unique ID for the new user
+                const maxId = Math.max(
+                    ...Object.values(validUsers).map(u => parseInt(u.id || '0'))
+                );
+                const newId = (maxId + 1).toString();
+
                 const newUser = {
-                    id: '2',
+                    id: newId,
                     name: req.name,
                     email: req.email,
                     password: req.password,
@@ -230,4 +243,70 @@ test('update user password works and persists', async ({ page }) => {
     await page.getByRole('link', { name: 'pd' }).click();
 
     await expect(page.getByRole('main')).toContainText(email);
+});
+
+test('admin user can update profile', async ({ page }) => {
+    await basicInit(page);
+
+    await page.getByRole('link', { name: 'Login' }).click();
+    await page.getByRole('textbox', { name: 'Email address' }).fill('a@jwt.com');
+    await page.getByRole('textbox', { name: 'Password' }).fill('admin');
+    await page.getByRole('button', { name: 'Login' }).click();
+
+    // Click on the user profile link in header
+    await page.locator('a[href="/diner-dashboard"]').click();
+
+    await page.getByRole('button', { name: 'Edit' }).click();
+    await expect(page.locator('h3')).toContainText('Edit user');
+    await page.getByRole('textbox').first().fill('Updated Admin Name');
+    await page.getByRole('button', { name: 'Update' }).click();
+
+    // Wait for update
+    await page.waitForTimeout(1000);
+
+    // Logout to verify persistence
+    await page.getByRole('button', { name: 'Logout' }).click();
+    await page.getByRole('link', { name: 'Login' }).click();
+
+    await page.getByRole('textbox', { name: 'Email address' }).fill('a@jwt.com');
+    await page.getByRole('textbox', { name: 'Password' }).fill('admin');
+    await page.getByRole('button', { name: 'Login' }).click();
+
+    await page.locator('a[href="/diner-dashboard"]').click();
+
+    // Verify the name persisted
+    await expect(page.getByRole('main')).toContainText('Updated Admin Name');
+});
+
+test('franchisee user can update profile', async ({ page }) => {
+    await basicInit(page);
+
+    await page.getByRole('link', { name: 'Login' }).click();
+    await page.getByRole('textbox', { name: 'Email address' }).fill('f@jwt.com');
+    await page.getByRole('textbox', { name: 'Password' }).fill('franchise');
+    await page.getByRole('button', { name: 'Login' }).click();
+
+    // Click on the user profile link in header
+    await page.locator('a[href="/diner-dashboard"]').click();
+
+    await page.getByRole('button', { name: 'Edit' }).click();
+    await expect(page.locator('h3')).toContainText('Edit user');
+    await page.getByRole('textbox').first().fill('Updated Franchisee Name');
+    await page.getByRole('button', { name: 'Update' }).click();
+
+    // Wait for update
+    await page.waitForTimeout(1000);
+
+    // Logout to verify persistence
+    await page.getByRole('button', { name: 'Logout' }).click();
+    await page.getByRole('link', { name: 'Login' }).click();
+
+    await page.getByRole('textbox', { name: 'Email address' }).fill('f@jwt.com');
+    await page.getByRole('textbox', { name: 'Password' }).fill('franchise');
+    await page.getByRole('button', { name: 'Login' }).click();
+
+    await page.locator('a[href="/diner-dashboard"]').click();
+
+    // Verify the name persisted
+    await expect(page.getByRole('main')).toContainText('Updated Franchisee Name');
 });
