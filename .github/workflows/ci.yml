@@ -56,14 +56,14 @@ jobs:
           printf '{"version": "%s" }' "$version" > public/version.json
 
       - name: Build
-        run: |
-          npm ci && npm run build
-          cp dist/index.html dist/404.html
+        run: npm ci && npm run build
 
-      - name: Update Pages Artifact
-        uses: actions/upload-pages-artifact@v4
+      - name: Update dist artifact
+        uses: actions/upload-artifact@v6
         with:
+          name: package
           path: dist/
+          retention-days: 1
 
   deploy:
     name: Deploy
@@ -71,11 +71,25 @@ jobs:
     permissions:
       pages: write
       id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      version: ${{ needs.build.outputs.version }}
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Create OIDC Token to AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          audience: sts.amazonaws.com
+          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT }}:role/${{ secrets.CI_IAM_ROLE }}
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: package
+          path: dist/
+
+      - name: Push to AWS S3
+        run: |
+          echo Deploying $version
+          aws s3 cp dist s3://${{ secrets.APP_BUCKET }} --recursive
+          aws cloudfront create-invalidation --distribution-id ${{ secrets.DISTRIBUTION_ID }} --paths "/*"
