@@ -201,6 +201,43 @@ async function basicInit(page: Page) {
     await route.fulfill({ json: orderRes });
   });
 
+  // User list endpoint
+  await page.route(/\/api\/user/, async (route) => {
+    const method = route.request().method();
+    const url = new URL(route.request().url());
+    const pathname = url.pathname;
+
+    // DELETE /api/user/:userId
+    const deleteMatch = pathname.match(/\/api\/user\/(.+)$/);
+    if (deleteMatch && method === "DELETE") {
+      const userId = deleteMatch[1];
+      // Remove the user from validUsers
+      const emailToDelete = Object.entries(validUsers).find(([, user]) => user.id === userId)?.[0];
+      if (emailToDelete) {
+        delete validUsers[emailToDelete];
+      }
+      await route.fulfill({ json: { message: "OK" } });
+      return;
+    }
+
+    // GET /api/user - list users
+    if (pathname === "/api/user" && method === "GET") {
+      const pageNum = Number(url.searchParams.get("page")) || 0;
+      const limit = Number(url.searchParams.get("limit")) || 10;
+      const userList = Object.values(validUsers);
+      const paginatedUsers = userList.slice(pageNum * limit, (pageNum + 1) * limit);
+      await route.fulfill({
+        json: {
+          users: paginatedUsers,
+          more: paginatedUsers.length === limit
+        }
+      });
+      return;
+    }
+
+    await route.fallback();
+  });
+
   await page.goto("/");
 }
 
@@ -234,7 +271,6 @@ test("purchase with login", async ({ page }) => {
   await page.getByRole("button", { name: "Checkout" }).click();
 
   // Login
-  await page.getByPlaceholder("Email address").click();
   await page.getByPlaceholder("Email address").fill("d@jwt.com");
   await page.getByPlaceholder("Email address").press("Tab");
   await page.getByPlaceholder("Password").fill("a");
@@ -274,6 +310,46 @@ test("create and delete franchise as admin", async ({ page }) => {
   await page.locator('tbody:nth-child(5) > .border-neutral-500 > .px-6 > .px-2').click();
   await page.getByRole('button', { name: 'Close' }).click();
   await expect(page.getByRole('table').first()).not.toContainText('Provo');
+});
+
+test("admin can view and delete users", async ({ page }) => {
+  await basicInit(page);
+
+  // Login as admin
+  await page.getByRole("link", { name: "Login" }).click();
+  await page.getByRole("textbox", { name: "Email address" }).fill("a@jwt.com");
+  await page.getByRole("textbox", { name: "Email address" }).press("Tab");
+  await page.getByRole("textbox", { name: "Password" }).fill("admin");
+  await page.getByRole("textbox", { name: "Password" }).press("Enter");
+
+  // Go to Admin dashboard
+  await page.getByRole("link", { name: "Admin" }).click();
+
+  // Wait for page to load
+  await page.waitForLoadState('networkidle');
+
+  // Scroll down to see the users table
+  await page.locator('h3', { hasText: 'Users' }).scrollIntoViewIfNeeded();
+
+  // Wait for the table to have content
+  const usersTable = page.getByRole("table").nth(1); // Second table should be users
+  await usersTable.waitFor({ state: 'visible' });
+  await expect(usersTable).toContainText("Kai Chen");
+  await expect(usersTable).toContainText("d@jwt.com");
+
+  // Find and click the delete button for the Kai Chen row
+  const kaiChenRow = page.getByRole("row").filter({ has: page.getByText("Kai Chen") }).first();
+  await kaiChenRow.waitFor({ state: 'visible' });
+  const deleteButton = kaiChenRow.getByRole("button", { name: "Delete" });
+  await deleteButton.click();
+
+  // Wait a moment for the deletion to process and the table to update
+  await page.waitForTimeout(500);
+  await page.waitForLoadState('networkidle');
+
+  // Verify the user is no longer in the list
+  await expect(page.getByRole("table").nth(1)).not.toContainText("Kai Chen");
+  await expect(page.getByRole("table").nth(1)).not.toContainText("d@jwt.com");
 });
 
 test("franchisee can create and delete stores", async ({ page }) => {
