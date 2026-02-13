@@ -269,11 +269,11 @@ test("create and delete franchise as admin", async ({ page }) => {
   await page.getByRole('textbox', { name: 'franchisee admin email' }).click();
   await page.getByRole('textbox', { name: 'franchisee admin email' }).fill('f@jwt.com');
   await page.getByRole('button', { name: 'Create' }).click();
-  await expect(page.getByRole('table')).toContainText('Provo');
+  await expect(page.getByRole('table').first()).toContainText('Provo');
 
   await page.locator('tbody:nth-child(5) > .border-neutral-500 > .px-6 > .px-2').click();
   await page.getByRole('button', { name: 'Close' }).click();
-  await expect(page.getByRole('table')).not.toContainText('Provo');
+  await expect(page.getByRole('table').first()).not.toContainText('Provo');
 });
 
 test("franchisee can create and delete stores", async ({ page }) => {
