@@ -14,7 +14,7 @@ interface Props {
 export default function FranchiseDashboard(props: Props) {
   const navigate = useNavigate();
   const [franchise, setFranchise] = React.useState<Franchise | null>(null);
-  const [loading, setLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
     (async () => {

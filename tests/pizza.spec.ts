@@ -352,6 +352,13 @@ test("admin can view and delete users", async ({ page }) => {
   await expect(page.getByRole("table").nth(1)).not.toContainText("d@jwt.com");
 });
 
+test("default view is why invest page for non franchisee", async ({ page }) => {
+  await basicInit(page);
+  await page.getByLabel('Global').getByRole('link', { name: 'Franchise' }).click();
+  await expect(page.getByRole('main')).toContainText('So you want a piece of the pie?');
+  await expect(page.getByRole('alert')).toContainText('If you are already a franchisee, pleaseloginusing your franchise account');
+});
+
 test("franchisee can create and delete stores", async ({ page }) => {
   await basicInit(page);
 
